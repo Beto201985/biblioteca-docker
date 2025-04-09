@@ -1,0 +1,45 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_DATABASE: biblioteca
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: usuario
+      MYSQL_PASSWORD: userpass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - biblioteca-net
+    healthcheck:               # 👈 AÑADIDO
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: biblioteca-app
+    depends_on:               # 👈 MODIFICADO
+      mysql:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/biblioteca
+      SPRING_DATASOURCE_USERNAME: usuario
+      SPRING_DATASOURCE_PASSWORD: userpass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+    networks:
+      - biblioteca-net
+
+volumes:
+  mysql-data:
+
+networks:
+  biblioteca-net:
+    driver: bridge
+
